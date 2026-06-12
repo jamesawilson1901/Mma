@@ -8,6 +8,12 @@ reason for picking Glicko-2 over Elo.
 Writes a post-bout snapshot per fighter to `ratings_history`. The latest
 snapshot per fighter is that fighter's current rating; the full history powers
 as-of-date feature lookups in the backtest (no leakage).
+
+Also writes a pre-fight win probability for every rated bout to `predictions`
+(model='tier1_glicko'). Because the probability is computed from the ratings as
+they stand BEFORE the bout is scored, inside a single chronological pass, the
+prediction stream is walk-forward by construction (verified by
+tests/test_leakage.py).
 """
 from __future__ import annotations
 
@@ -35,6 +41,7 @@ def run(conn: sqlite3.Connection, engine: Glicko2 | None = None) -> dict:
     """
     engine = engine or Glicko2()
     conn.execute("DELETE FROM ratings_history")
+    conn.execute("DELETE FROM predictions WHERE model='tier1_glicko'")
 
     bouts = conn.execute(
         "SELECT bout_id, date, fighter1_id, fighter2_id, winner_id, result "
@@ -44,7 +51,9 @@ def run(conn: sqlite3.Connection, engine: Glicko2 | None = None) -> dict:
 
     ratings: dict[str, Rating] = {}
     last_date: dict[str, date] = {}
+    n_bouts: dict[str, int] = {}
     snapshots = []
+    preds = []
     n_rated = n_skipped = 0
 
     for b in bouts:
@@ -69,6 +78,12 @@ def run(conn: sqlite3.Connection, engine: Glicko2 | None = None) -> dict:
                     else:
                         r2 = r
 
+        # Pre-fight prediction from the (layoff-inflated) PRE-bout ratings.
+        preds.append((
+            b["bout_id"], "tier1_glicko", engine.expected_score(r1, r2),
+            n_bouts.get(f1, 0), n_bouts.get(f2, 0),
+        ))
+
         if b["result"] == "draw":
             s1 = s2 = 0.5
         else:  # win
@@ -79,6 +94,8 @@ def run(conn: sqlite3.Connection, engine: Glicko2 | None = None) -> dict:
         new1 = engine.rate_period(r1, [(r2, s1)])
         new2 = engine.rate_period(r2, [(r1, s2)])
         ratings[f1], ratings[f2] = new1, new2
+        n_bouts[f1] = n_bouts.get(f1, 0) + 1
+        n_bouts[f2] = n_bouts.get(f2, 0) + 1
         if bdate is not None:
             last_date[f1] = last_date[f2] = bdate
 
@@ -92,12 +109,18 @@ def run(conn: sqlite3.Connection, engine: Glicko2 | None = None) -> dict:
         "(fighter_id,bout_id,date,rating,rd,vol) VALUES(?,?,?,?,?,?)",
         snapshots,
     )
+    conn.executemany(
+        "INSERT OR REPLACE INTO predictions"
+        "(bout_id,model,p_fighter1,n_prior1,n_prior2) VALUES(?,?,?,?,?)",
+        preds,
+    )
     conn.commit()
     return {
         "bouts_rated": n_rated,
         "bouts_skipped_nc": n_skipped,
         "fighters_rated": len(ratings),
         "snapshots": len(snapshots),
+        "predictions": len(preds),
     }
 
 

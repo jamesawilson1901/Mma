@@ -125,6 +125,17 @@ CREATE TABLE IF NOT EXISTS ratings_history (
 CREATE INDEX IF NOT EXISTS idx_ratings_fighter ON ratings_history(fighter_id);
 CREATE INDEX IF NOT EXISTS idx_ratings_date ON ratings_history(date);
 
+-- Pre-fight model predictions, captured during the chronological rating replay
+-- (strictly walk-forward: computed from ratings BEFORE the bout is scored).
+CREATE TABLE IF NOT EXISTS predictions (
+    bout_id     TEXT REFERENCES bouts(bout_id),
+    model       TEXT,                -- 'tier1_glicko', later 'tier2_gbm'
+    p_fighter1  REAL,                -- P(fighter1 wins)
+    n_prior1    INTEGER,             -- fighter1's rated bouts before this one
+    n_prior2    INTEGER,
+    PRIMARY KEY (bout_id, model)
+);
+
 -- Rows that could not be resolved to a canonical fighter (audit / improvement).
 CREATE TABLE IF NOT EXISTS unmatched_log (
     raw_name  TEXT,

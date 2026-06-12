@@ -4,7 +4,7 @@ Living build log. Update before ending any session so the next one can resume
 without re-explanation.
 
 ## Current state
-- **Build step:** 2 of 7 complete (Glicko-2 engine validated). **Checkpoint reached — paused per spec before step 3.**
+- **Build step:** 3 of 7 complete (backtest harness + baselines + calibration report). Step 4 (Tier 2 GBM) in progress.
 - **Branch:** `claude/mma-model-imaz57` (harness-designated). See "Decisions" re: spec's `mma-model` name.
 - **Folder:** `mma-model/` at repo root, as specified. No files outside it touched.
 
@@ -56,13 +56,38 @@ without re-explanation.
   Holloway… (Valentina Shevchenko top woman). Matches consensus elite tier.
 - **Tests:** 20 passing (glicko2, entity, parse).
 
+### Step 3 — Backtest harness + baselines + calibration report ✅
+- **Odds ingest** (`ingest/odds_dataset.py`): jansen88/ufc-data
+  `complete_ufc_data.csv` (betmma.tips odds, Nov 2014 → Sep 2023), cached in
+  `data/raw/`. Matcher: exact normalized-name-pair + date(±3d) → fuzzy resolver
+  fallback → unmatched_log. **3394/3448 odds bouts matched (98.4%)**; 54
+  unmatched logged. Guards against literal `inf` odds strings in the source.
+- **Pre-fight predictions** captured inside the chronological rating replay
+  (`predictions` table, model='tier1_glicko') — walk-forward by construction,
+  enforced by `tests/test_leakage.py` (prediction for bout at T is bit-identical
+  when all bouts after T are deleted).
+- **Metrics** (`backtest/metrics.py`): log loss, Brier, accuracy, calibration
+  bins, margin-removed implied prob, Kelly fraction, flat & 1/4-Kelly staking
+  ROI, percentile-bootstrap CIs. Hand-computed-value unit tests.
+- **Report** (`backtest/report.py` → `reports/backtest_tier1.md` + calibration
+  PNG): n=3335 decisive bouts with odds. **Evaluation orientation randomized**
+  per bout (ufcstats lists winners first — 64% base rate would distort the
+  calibration display; scoring metrics are invariant under the flip).
+- **Step 3 results (honest):** Tier 1 log loss 0.6985 vs implied 0.6174 — the
+  results-only Glicko does NOT beat the market (expected; the market embeds far
+  more information). Pick-favourite accuracy 65%; model 56%. Staking ROI ≈ −7%
+  (CIs mostly below 0). Calibration plot shows Tier 1 is **overconfident**
+  (flattened reliability slope) → a shrinkage/calibration layer is an easy step
+  4 win, alongside the Tier 2 feature model.
+
 ## How to reproduce
 ```bash
 cd mma-model
 pip install -r requirements.txt
-python -m pytest                 # 20 tests
+python -m pytest                 # 32 tests
 python -m scripts.build_db       # builds data/mma.sqlite from cached CSVs
 python -m scripts.run_ratings    # runs Glicko-2, prints top-25 sanity ranking
+python -m scripts.run_backtest   # odds ingest + replay + reports/backtest_tier1.md
 ```
 
 ## Decisions made
@@ -84,8 +109,14 @@ python -m scripts.run_ratings    # runs Glicko-2, prints top-25 sanity ranking
   use `get_or_create`, so both fighters always get an id).
 - RD cap currently = default RD (350). Fine for v1.
 
-## Next: Step 3 (after switching to Fable per checkpoint)
-Backtest harness + baselines (favourite, margin-removed implied prob) +
-calibration report (log loss, Brier, calibration plot) over UFC historical
-odds. Needs the jansen88/ufc-data odds dataset wired into the `odds` table with
-the fuzzy name matcher. Strict walk-forward using `ratings_history` as-of date.
+## Next: Step 4 — Tier 2 gradient-boosted model
+- Walk-forward features as-of fight date: Glicko diff + RD, age/reach/height
+  diffs, sig-strike rates, TD acc/def, sub attempts, win-method profile, layoff
+  days, title/5-round flag, recent form.
+- **Critical:** symmetrize/randomize fighter orientation in training — ufcstats
+  lists winners as fighter1, so naive f1-vs-f2 features leak the label through
+  ordering.
+- Evaluate vs Tier 1 and baselines on the same odds sample via the existing
+  harness (report.py is model-agnostic via the `predictions` table).
+- Also try a calibration/shrinkage layer on Tier 1 (it is overconfident).
+- CHECKPOINT after step 4: prompt user to switch back to Opus before step 5.

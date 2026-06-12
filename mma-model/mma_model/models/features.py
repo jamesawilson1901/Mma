@@ -218,7 +218,11 @@ def build_features(conn: sqlite3.Connection) -> pd.DataFrame:
     careers: dict[str, Career] = {}
     rows = []
     for b in bouts:
-        if b["result"] == "nc":
+        # Skip no-contests and any non-completed bout (e.g. scheduled future
+        # cards staged for the dashboard) -- they carry no result to learn from.
+        if b["result"] not in ("win", "draw"):
+            continue
+        if b["result"] == "win" and b["winner_id"] is None:
             continue
         f1, f2 = b["fighter1_id"], b["fighter2_id"]
         bdate = date.fromisoformat(b["date"]) if b["date"] else None

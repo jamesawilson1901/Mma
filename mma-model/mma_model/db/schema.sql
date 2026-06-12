@@ -148,6 +148,27 @@ CREATE TABLE IF NOT EXISTS predictions (
     PRIMARY KEY (bout_id, model)
 );
 
+-- Paper-trading ledger: hypothetical stakes logged at capture-time odds, then
+-- settled automatically from results. No real money (v1 non-goal).
+CREATE TABLE IF NOT EXISTS paper_bets (
+    bet_id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    bout_id      TEXT REFERENCES bouts(bout_id),
+    fighter_id   TEXT REFERENCES fighters(fighter_id),   -- side wagered on
+    model        TEXT,
+    p_model      REAL,            -- model probability for that side at bet time
+    stake        REAL,
+    odds_decimal REAL,            -- odds taken (capture-time)
+    edge         REAL,            -- p_model * odds - 1
+    captured_at  TEXT,            -- ISO timestamp the bet was logged
+    status       TEXT DEFAULT 'open',   -- open / won / lost / void
+    settled_at   TEXT,
+    pnl          REAL,            -- profit/loss in stake units once settled
+    closing_odds REAL,            -- offered closing odds for the same side
+    clv          REAL             -- closing-line value (see ledger.compute_clv)
+);
+CREATE INDEX IF NOT EXISTS idx_paper_bout ON paper_bets(bout_id);
+CREATE INDEX IF NOT EXISTS idx_paper_status ON paper_bets(status);
+
 -- Rows that could not be resolved to a canonical fighter (audit / improvement).
 CREATE TABLE IF NOT EXISTS unmatched_log (
     raw_name  TEXT,

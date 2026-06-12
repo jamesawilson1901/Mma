@@ -12,5 +12,8 @@ lxml>=4.9
 rapidfuzz>=3.0
 # Backtest report plots
 matplotlib>=3.8
+# Dashboard (build step 6)
+fastapi>=0.110
+uvicorn>=0.27
 # Tests
 pytest>=7.4

@@ -59,7 +59,14 @@ def run(conn: sqlite3.Connection, engine: Glicko2 | None = None) -> dict:
     n_rated = n_skipped = 0
 
     for b in bouts:
-        if b["result"] == "nc":
+        # Only completed, decisive-or-draw bouts carry a rating signal. This
+        # also skips upcoming/scheduled bouts (result NULL, no winner) so the
+        # dashboard can stage future cards in the same table without polluting
+        # ratings.
+        if b["result"] not in ("win", "draw"):
+            n_skipped += 1
+            continue
+        if b["result"] == "win" and b["winner_id"] is None:
             n_skipped += 1
             continue
         bdate = _to_date(b["date"])

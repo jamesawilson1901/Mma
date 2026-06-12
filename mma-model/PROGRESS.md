@@ -4,7 +4,7 @@ Living build log. Update before ending any session so the next one can resume
 without re-explanation.
 
 ## Current state
-- **Build step:** 5 of 7 complete (cross-promotion ingest pipeline + promotion-aware global ratings). Real non-UFC data NOT loaded in this sandbox — see Environment notes. Next: step 6 (live odds + paper ledger + dashboard).
+- **Build step:** 6 of 7 complete (live-odds capture + paper-bet ledger + dashboard). Only step 7 (run forward for months) remains — that is operational, not a build step.
 - **Branch:** `claude/mma-model-imaz57` (harness-designated). See "Decisions" re: spec's `mma-model` name.
 - **Folder:** `mma-model/` at repo root, as specified. No files outside it touched.
 
@@ -152,6 +152,35 @@ without re-explanation.
 - **Tests:** `test_promotions.py`, `test_sherdog.py` (parser, robots gate,
   loader exclusions, cross-source linking, dedup, debutant-prior). 48 total.
 
+### Step 6 — Live odds capture + paper-bet ledger + dashboard ✅
+- **Live odds** (`ingest/live_odds.py`): pluggable capture into the `odds`
+  table with `captured_at` + `is_closing`. The Odds API client (`OddsAPIClient`,
+  reads ODDS_API_KEY) **plus** an always-available manual CSV path
+  (`snapshot_from_csv`). NOTE in code: verify the free-tier quota and (thin)
+  non-UFC coverage before relying on the API. The Odds API is firewalled in this
+  sandbox (403), so production-only — the CSV path is the offline fallback.
+- **Paper-bet ledger** (`paper/ledger.py`): `place_bet` /
+  `suggest_and_place` (1/4-Kelly, edge-gated) / `settle` (auto from results) /
+  `record_closing` (CLV) / `summary` (record, ROI with bootstrap CI, avg & %
+  positive CLV). No real money (v1 non-goal). CLV = taken/closing − 1.
+- **Model serving** (`models/predict.py`): live Tier 1 (Glicko-2) win prob for
+  any fighter pair from current ratings; Tier 2 serving flagged as a future
+  enhancement. Used by the dashboard and the Kelly suggester.
+- **Dashboard** (`app/`, FastAPI): `/` upcoming cards (model prob vs current
+  odds, edges flagged at >5%), `/fighter/{id}` profile (record + rating-history
+  sparkline), `/ledger` (running ROI + CI + CLV). JSON mirrors at `/api/*` make
+  it headless-testable via TestClient. Launch: `python -m scripts.run_dashboard`.
+- **Robustness fix:** the rating replay and feature builder now skip any bout
+  without a decisive/draw result, so scheduled future cards can live in the
+  `bouts` table (for the dashboard) without polluting ratings or training.
+- **Demo:** `scripts/seed_demo_card.py` stages a fantasy upcoming bout (top two
+  rated fighters — currently Jon Jones vs Islam Makhachev) with an edge + open
+  Kelly bet, and settles 6 paper bets on real historical bouts so the ledger
+  shows realized P/L + CLV. Static HTML snapshots in `reports/dashboard_*.html`.
+- **Tests:** `test_paper.py` (predict, resultless-bout guard, ledger
+  place/settle/CLV, Kelly gating, live-odds snapshot + API guard, dashboard
+  endpoints). 55 total.
+
 ## How to reproduce
 ```bash
 cd mma-model
@@ -162,6 +191,8 @@ python -m scripts.run_ratings    # runs Glicko-2, prints top-25 sanity ranking
 python -m scripts.run_backtest   # odds ingest + replay + reports/backtest_tier1.md
 python -m scripts.run_tier2      # Tier 2 GBM + reports/backtest_tier2_vs_tier1.md
 python -m scripts.run_crosspromo --csv <records.csv>   # cross-promotion ingest (needs data)
+python -m scripts.seed_demo_card # stage a demo upcoming card + paper bets
+python -m scripts.run_dashboard  # FastAPI dashboard on http://127.0.0.1:8000
 ```
 
 ## Decisions made
@@ -183,15 +214,15 @@ python -m scripts.run_crosspromo --csv <records.csv>   # cross-promotion ingest 
   use `get_or_create`, so both fighters always get an id).
 - RD cap currently = default RD (350). Fine for v1.
 
-## Next: Step 6 — live odds snapshots + paper-bet ledger + dashboard
-- Daily odds snapshot for upcoming cards + a closing-line snapshot (The Odds API
-  free tier, or manual CSV). **Verify current pricing/coverage before
-  integrating.** Own closing-line history is the key asset for non-UFC orgs.
-  Network caveat: external odds APIs may be firewalled here too — check first,
-  fall back to manual CSV entry.
-- Paper-bet ledger: log hypothetical stakes at capture-time odds, settle from
-  results scrape, running ROI + CLV chart. `odds` table already supports
-  is_closing + captured_at.
-- Local dashboard (FastAPI or Streamlit): upcoming cards with model prob vs
-  current odds, flagged edges, fighter rating-history pages.
-- Then step 7: run it forward for a few months before any real-money decision.
+## Next: Step 7 — run it forward (operational, not a build step)
+- Capture daily + closing odds snapshots for upcoming cards (CSV or The Odds
+  API where reachable), let the ledger settle automatically, and watch ROI +
+  **CLV** accumulate over a few months before any real-money decision.
+- Open enhancement backlog (none blocking):
+  * load real cross-promotion data where Sherdog/Tapology are reachable (step 5
+    pipeline is ready) so non-UFC fighters and UFC debutants get real priors;
+  * serve Tier 2 (not just Tier 1) on the dashboard by building an as-of-today
+    feature row + the trained GBM;
+  * calibration/shrinkage layer on Tier 1 (it is overconfident);
+  * promotion-specific decision tendencies as a feature once multi-promotion
+    data exists (the ONE judging caveat).

@@ -18,19 +18,21 @@ with bootstrap confidence intervals.
   UFC stat history, else Tier 1 with wider uncertainty.
 
 ## Status
-Build steps 1–5 complete: DB + entity resolution, validated Glicko-2, walk-forward
-backtest vs historical odds, the Tier 2 LightGBM model, and the cross-promotion
-ingest pipeline (Sherdog scraper + promotion/ruleset inference + promotion-aware
-global ratings). Headline result so far (n=2650 UFC bouts with odds, strict
-walk-forward): Tier 2 log loss 0.6762 vs Tier 1 0.7102 vs bookmaker implied
-0.6269 — Tier 2 beats Tier 1 decisively and is well calibrated, but **does not
-yet beat the closing line** (reported honestly in `reports/`).
+Build steps 1–6 complete: DB + entity resolution, validated Glicko-2, walk-forward
+backtest vs historical odds, the Tier 2 LightGBM model, the cross-promotion
+ingest pipeline, and the live-odds capture + paper-bet ledger + FastAPI
+dashboard. Only step 7 (run it forward for a few months) remains — operational,
+not a build step.
 
-Cross-promotion (ONE/PFL/Bellator) records could not be fetched in the build
-sandbox (those sites are firewalled); the pipeline is built and tested, and
-populates with one command where the sources are reachable — see
-[PROGRESS.md](PROGRESS.md) for the live build log and remaining steps (live odds
-capture, paper-bet ledger, dashboard).
+Headline backtest (n=2650 UFC bouts with odds, strict walk-forward): Tier 2 log
+loss 0.6762 vs Tier 1 0.7102 vs bookmaker implied 0.6269 — Tier 2 beats Tier 1
+decisively and is well calibrated, but **does not yet beat the closing line**
+(reported honestly in `reports/`). No real money in v1.
+
+Sandbox note: every external source (ufcstats, Sherdog, Tapology, The Odds API)
+is firewalled in the build environment, so UFC data comes from a committed CSV
+mirror and the cross-promotion / live-odds paths run where their sources are
+reachable. See [PROGRESS.md](PROGRESS.md) for the live build log.
 
 ## Quickstart
 ```bash
@@ -40,6 +42,8 @@ python -m scripts.build_db       # build data/mma.sqlite from cached UFC data
 python -m scripts.run_ratings    # Glicko-2 ratings + top-25 sanity ranking
 python -m scripts.run_backtest   # odds ingest + Tier 1 backtest report
 python -m scripts.run_tier2      # Tier 2 GBM walk-forward + comparison report
+python -m scripts.seed_demo_card # stage a demo upcoming card + paper bets
+python -m scripts.run_dashboard  # paper-trading dashboard on http://127.0.0.1:8000
 ```
 
 ## Layout
@@ -65,7 +69,10 @@ mma_model/
   backtest/
     metrics.py         log loss/Brier/calibration/Kelly/bootstrap CIs
     report.py          single-model + multi-model comparison reports
-scripts/               build_db, run_ratings, run_backtest, run_tier2, run_crosspromo
+  paper/ledger.py      paper-bet ledger: place/settle/CLV/ROI
+  app/                 FastAPI dashboard (upcoming edges, fighter pages, ledger)
+scripts/               build_db, run_ratings, run_backtest, run_tier2,
+                       run_crosspromo, seed_demo_card, run_dashboard
 tests/                 paper validation, leakage, metrics, features, entity, parse
 data/raw/              cached data snapshots (committed for reproducibility)
 reports/               generated backtest reports + calibration plots

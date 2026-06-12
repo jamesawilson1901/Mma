@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Minimal synthetic fixture mirroring Sherdog's fighter-page markup.
+     Used only to unit-test the parser; not real data. -->
+<html>
+<head><title>Fighter</title></head>
+<body>
+  <div class="bio_fighter">
+    <h1><span class="fn">Sample Fighter</span></h1>
+  </div>
+
+  <section class="fighter_last_fight"></section>
+
+  <div class="module fight_history">
+    <table class="new_table fighter">
+      <tr>
+        <th>Result</th><th>Fighter</th><th>Event</th>
+        <th>Method/Referee</th><th>R</th><th>Time</th>
+      </tr>
+      <tr>
+        <td class="win"><span class="final_result win">win</span></td>
+        <td>Alpha Opponent</td>
+        <td>ONE 165 - Superstar vs Challenger
+          <span class="sub_line">Jan / 28 / 2024</span>
+        </td>
+        <td>Decision (Unanimous) <span class="sub_line">John Referee</span></td>
+        <td>5</td>
+        <td>5:00</td>
+      </tr>
+      <tr>
+        <td class="loss"><span class="final_result loss">loss</span></td>
+        <td>Bravo Opponent</td>
+        <td>PFL 3 - 2023 Regular Season
+          <span class="sub_line">Jun / 08 / 2023</span>
+        </td>
+        <td>KO (Punches) <span class="sub_line">Jane Referee</span></td>
+        <td>2</td>
+        <td>3:24</td>
+      </tr>
+      <tr>
+        <td class="win"><span class="final_result win">win</span></td>
+        <td>Charlie Grappler</td>
+        <td>ONE Championship - Submission Grappling
+          <span class="sub_line">Mar / 10 / 2023</span>
+        </td>
+        <td>Submission (Points) <span class="sub_line">N/A</span></td>
+        <td>1</td>
+        <td>10:00</td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

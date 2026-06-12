@@ -18,13 +18,19 @@ with bootstrap confidence intervals.
   UFC stat history, else Tier 1 with wider uncertainty.
 
 ## Status
-Build steps 1–4 complete: DB + entity resolution, validated Glicko-2, walk-forward
-backtest vs historical odds, and the Tier 2 LightGBM model. Headline result so
-far (n=2650 bouts with odds, strict walk-forward): Tier 2 log loss 0.6762 vs
-Tier 1 0.7102 vs bookmaker implied 0.6269 — Tier 2 beats Tier 1 decisively and
-is well calibrated, but **does not yet beat the closing line** (reported
-honestly in `reports/`). See [PROGRESS.md](PROGRESS.md) for the live build log
-and remaining steps (cross-promotion ingest, live odds capture, dashboard).
+Build steps 1–5 complete: DB + entity resolution, validated Glicko-2, walk-forward
+backtest vs historical odds, the Tier 2 LightGBM model, and the cross-promotion
+ingest pipeline (Sherdog scraper + promotion/ruleset inference + promotion-aware
+global ratings). Headline result so far (n=2650 UFC bouts with odds, strict
+walk-forward): Tier 2 log loss 0.6762 vs Tier 1 0.7102 vs bookmaker implied
+0.6269 — Tier 2 beats Tier 1 decisively and is well calibrated, but **does not
+yet beat the closing line** (reported honestly in `reports/`).
+
+Cross-promotion (ONE/PFL/Bellator) records could not be fetched in the build
+sandbox (those sites are firewalled); the pipeline is built and tested, and
+populates with one command where the sources are reachable — see
+[PROGRESS.md](PROGRESS.md) for the live build log and remaining steps (live odds
+capture, paper-bet ledger, dashboard).
 
 ## Quickstart
 ```bash
@@ -46,6 +52,9 @@ mma_model/
     ufc_scraper.py     live ufcstats.com scraper (BeautifulSoup, cached)
     ufc_dataset.py     CSV-mirror loader -> SQLite (used where ufcstats blocked)
     odds_dataset.py    historical odds loader + name-pair fuzzy matcher
+    sherdog_scraper.py cross-promotion record scraper (robots-gated, cached)
+    promotions.py      event-name -> promotion + MMA/non-MMA ruleset inference
+    crosspromo.py      cross-promotion loader (resolve, exclude, dedup, link)
   entity/resolver.py   canonical ids + alias index + fuzzy matching
   ratings/
     glicko2.py         hand-rolled Glicko-2 engine
@@ -56,7 +65,7 @@ mma_model/
   backtest/
     metrics.py         log loss/Brier/calibration/Kelly/bootstrap CIs
     report.py          single-model + multi-model comparison reports
-scripts/               build_db.py, run_ratings.py, run_backtest.py, run_tier2.py
+scripts/               build_db, run_ratings, run_backtest, run_tier2, run_crosspromo
 tests/                 paper validation, leakage, metrics, features, entity, parse
 data/raw/              cached data snapshots (committed for reproducibility)
 reports/               generated backtest reports + calibration plots

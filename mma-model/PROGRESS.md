@@ -4,14 +4,23 @@ Living build log. Update before ending any session so the next one can resume
 without re-explanation.
 
 ## Current state
-- **Build step:** 4 of 7 complete (Tier 2 GBM trained and compared). **Checkpoint reached — paused per spec before step 5 (switch back to Opus).**
+- **Build step:** 5 of 7 complete (cross-promotion ingest pipeline + promotion-aware global ratings). Real non-UFC data NOT loaded in this sandbox — see Environment notes. Next: step 6 (live odds + paper ledger + dashboard).
 - **Branch:** `claude/mma-model-imaz57` (harness-designated). See "Decisions" re: spec's `mma-model` name.
 - **Folder:** `mma-model/` at repo root, as specified. No files outside it touched.
 
 ## Environment notes (important for next session)
-- Running in a sandboxed cloud container. **`ufcstats.com` is firewalled**
-  (`host_not_allowed`); live scraping is impossible here. PyPI + GitHub raw ARE
-  reachable.
+- Running in a sandboxed cloud container. **`ufcstats.com`, `sherdog.com`,
+  `tapology.com` and `wikipedia.org` are all firewalled** (`host_not_allowed`);
+  live scraping is impossible here. PyPI + GitHub raw ARE reachable.
+- **Step 5 data gap (self-recovery rule applied):** no cross-promotion data
+  could be ingested in this sandbox. Sherdog/Tapology are blocked, and a GitHub
+  search turned up only UFC-family datasets (Greco1899, grappler185) plus
+  Sherdog *scraper* repos (Montanaz0r) that commit code, not data. Per the
+  spec's "skip it, note it, continue" rule the cross-promotion pipeline is
+  built and fully tested, but the live DB stays UFC-only. To populate it where
+  Sherdog is reachable:
+  `python -m scripts.run_crosspromo --crawl seeds.txt`  (seeds = Sherdog fighter
+  URLs, one per line) or `--csv records.csv` (Montanaz0r column layout).
 - Data therefore sourced from the **Greco1899/scrape_ufc_stats CSV mirror**
   (regularly-updated export of ufcstats.com), cached in `data/raw/` and
   committed for reproducibility. Snapshot current through **May 2026** events.
@@ -114,6 +123,35 @@ without re-explanation.
   reach_diff, td_acc/def_diff. Staking ROI remains negative; the report says so
   plainly.
 
+### Step 5 — Cross-promotion ingest + promotion-aware global ratings ✅
+- **Sherdog scraper** (`ingest/sherdog_scraper.py`): BeautifulSoup parser for
+  fighter records (results-level, all promotions). robots.txt-gated via
+  `can_fetch()`, 2s rate limit, per-page HTML cache. Pure parsers tested
+  against a committed fixture (`tests/fixtures/sherdog_fighter.html`).
+- **Promotion + ruleset inference** (`ingest/promotions.py`): event-name →
+  promotion code (UFC/ONE/PFL/Bellator/RIZIN/Strikeforce/...); `infer_ruleset`
+  flags ONE's non-MMA bouts (muay thai / kickboxing / submission grappling) via
+  event+division+method text so they are **excluded** (spec requirement).
+- **Cross-promotion loader** (`ingest/crosspromo.py`): resolves fighter &
+  opponent names through the alias-aware `EntityResolver` seeded from canonical
+  UFC fighters → a Sherdog "Conor McGregor" links to his ufcstats id; genuinely
+  new non-UFC fighters get stable synthetic ids + fighters rows. Skips UFC bouts
+  (ufcstats is authoritative — no double counting), excludes non-MMA, de-dups
+  the mirrored rows Sherdog emits on both fighters' pages, tags `promotion`/
+  `ruleset`/`source`, persists learned aliases to `fighter_aliases`.
+- **Global ratings span promotions automatically**: `rate_fighters.run` already
+  replays ALL bouts chronologically, so once non-UFC bouts are present a
+  fighter's pre-UFC ONE/PFL record builds their rating before their UFC debut.
+  Proven end-to-end by `test_crosspromotion_gives_debutant_a_real_prior`.
+- **Note on the `promotion` Tier-2 feature:** Tier 2 only fires where per-fight
+  UFC stats exist, so the bouts it sees are all UFC and a promotion feature
+  would be constant — the cross-promotion signal reaches Tier 2 through
+  `rating_diff` instead. Promotion-specific decision tendencies (the ONE
+  caveat) matter for Tier 1 / multi-promotion prediction and are a step-6/7
+  enhancement.
+- **Tests:** `test_promotions.py`, `test_sherdog.py` (parser, robots gate,
+  loader exclusions, cross-source linking, dedup, debutant-prior). 48 total.
+
 ## How to reproduce
 ```bash
 cd mma-model
@@ -123,6 +161,7 @@ python -m scripts.build_db       # builds data/mma.sqlite from cached CSVs
 python -m scripts.run_ratings    # runs Glicko-2, prints top-25 sanity ranking
 python -m scripts.run_backtest   # odds ingest + replay + reports/backtest_tier1.md
 python -m scripts.run_tier2      # Tier 2 GBM + reports/backtest_tier2_vs_tier1.md
+python -m scripts.run_crosspromo --csv <records.csv>   # cross-promotion ingest (needs data)
 ```
 
 ## Decisions made
@@ -144,18 +183,15 @@ python -m scripts.run_tier2      # Tier 2 GBM + reports/backtest_tier2_vs_tier1.
   use `get_or_create`, so both fighters always get an id).
 - RD cap currently = default RD (350). Fine for v1.
 
-## Next: Step 5 (after switching back to Opus per checkpoint)
-Cross-promotion records ingestion (Tapology/Sherdog) → global Glicko across
-promotions:
-- **Network caveat:** tapology.com / sherdog.com may be firewalled here like
-  ufcstats was. Plan B (apply the git/data self-recovery rules): look for an
-  open dataset/mirror on GitHub (e.g. Sherdog scrapes) before writing a live
-  scraper; whichever route, respect robots.txt, low volume, cache aggressively.
-- MMA-rules bouts only (tag and exclude ONE's muay thai/kickboxing/grappling);
-  `ruleset` column already exists.
-- `promotion` categorical feature; entity resolution across sources via the
-  alias table (UFC names ↔ Tapology/Sherdog names).
-- Re-run global ratings; UFC debutants should then carry real priors instead
-  of 1500.
-Remaining after that: step 6 (live odds snapshots, paper-bet ledger,
-dashboard), step 7 (run forward).
+## Next: Step 6 — live odds snapshots + paper-bet ledger + dashboard
+- Daily odds snapshot for upcoming cards + a closing-line snapshot (The Odds API
+  free tier, or manual CSV). **Verify current pricing/coverage before
+  integrating.** Own closing-line history is the key asset for non-UFC orgs.
+  Network caveat: external odds APIs may be firewalled here too — check first,
+  fall back to manual CSV entry.
+- Paper-bet ledger: log hypothetical stakes at capture-time odds, settle from
+  results scrape, running ROI + CLV chart. `odds` table already supports
+  is_closing + captured_at.
+- Local dashboard (FastAPI or Streamlit): upcoming cards with model prob vs
+  current odds, flagged edges, fighter rating-history pages.
+- Then step 7: run it forward for a few months before any real-money decision.

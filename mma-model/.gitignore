@@ -4,6 +4,7 @@ data/*.sqlite
 
 # Cached scraper HTML
 data/raw/html/
+data/raw/sherdog/
 
 # Python
 __pycache__/

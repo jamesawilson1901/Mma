@@ -18,16 +18,22 @@ with bootstrap confidence intervals.
   UFC stat history, else Tier 1 with wider uncertainty.
 
 ## Status
-Build steps 1–2 complete (DB + entity resolution + validated Glicko-2). See
-[PROGRESS.md](PROGRESS.md) for the live build log, environment notes, and the
-remaining steps (backtest, Tier 2 GBM, cross-promotion ingest, dashboard).
+Build steps 1–4 complete: DB + entity resolution, validated Glicko-2, walk-forward
+backtest vs historical odds, and the Tier 2 LightGBM model. Headline result so
+far (n=2650 bouts with odds, strict walk-forward): Tier 2 log loss 0.6762 vs
+Tier 1 0.7102 vs bookmaker implied 0.6269 — Tier 2 beats Tier 1 decisively and
+is well calibrated, but **does not yet beat the closing line** (reported
+honestly in `reports/`). See [PROGRESS.md](PROGRESS.md) for the live build log
+and remaining steps (cross-promotion ingest, live odds capture, dashboard).
 
 ## Quickstart
 ```bash
 pip install -r requirements.txt
-python -m pytest                 # unit tests (Glicko-2 paper validation, parsing, entity)
+python -m pytest                 # unit tests (Glicko-2 paper validation, leakage, metrics)
 python -m scripts.build_db       # build data/mma.sqlite from cached UFC data
 python -m scripts.run_ratings    # Glicko-2 ratings + top-25 sanity ranking
+python -m scripts.run_backtest   # odds ingest + Tier 1 backtest report
+python -m scripts.run_tier2      # Tier 2 GBM walk-forward + comparison report
 ```
 
 ## Layout
@@ -39,13 +45,21 @@ mma_model/
     parse.py           pure parsing helpers (dates, tale-of-tape, stat strings)
     ufc_scraper.py     live ufcstats.com scraper (BeautifulSoup, cached)
     ufc_dataset.py     CSV-mirror loader -> SQLite (used where ufcstats blocked)
+    odds_dataset.py    historical odds loader + name-pair fuzzy matcher
   entity/resolver.py   canonical ids + alias index + fuzzy matching
   ratings/
     glicko2.py         hand-rolled Glicko-2 engine
-    rate_fighters.py   chronological streaming driver + current-rating query
-scripts/               build_db.py, run_ratings.py
-tests/                 test_glicko2.py, test_entity.py, test_parse.py
-data/raw/              cached UFC CSV snapshot (committed for reproducibility)
+    rate_fighters.py   chronological replay: ratings, pre-fight states, predictions
+  models/
+    features.py        walk-forward feature accumulator (leak-free, symmetrizable)
+    tier2.py           LightGBM, yearly walk-forward retrain, orientation-averaged
+  backtest/
+    metrics.py         log loss/Brier/calibration/Kelly/bootstrap CIs
+    report.py          single-model + multi-model comparison reports
+scripts/               build_db.py, run_ratings.py, run_backtest.py, run_tier2.py
+tests/                 paper validation, leakage, metrics, features, entity, parse
+data/raw/              cached data snapshots (committed for reproducibility)
+reports/               generated backtest reports + calibration plots
 ```
 
 ## Data sources

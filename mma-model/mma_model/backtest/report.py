@@ -197,6 +197,86 @@ def _staking_table(res: EvalResult) -> list[str]:
     return lines
 
 
+def write_comparison(
+    conn: sqlite3.Connection,
+    models: dict[str, str],          # model key -> display label
+    out_name: str = "comparison",
+) -> dict:
+    """Evaluate several models on the INTERSECTION of their odds samples.
+
+    Apples-to-apples: every model is scored on exactly the same bouts (the
+    bouts where all models have a prediction and odds are matched).
+    """
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    samples, metas = {}, {}
+    for m in models:
+        s, meta = load_sample(conn, m)
+        samples[m] = {row.bout_id: row for row in s}
+        metas[m] = meta
+    common = set.intersection(*(set(s) for s in samples.values()))
+    results = []
+    for m, label in models.items():
+        rows = sorted((samples[m][b] for b in common), key=lambda r: r.date)
+        results.append(evaluate(rows, label))
+
+    png = REPORT_DIR / f"calibration_{out_name}.png"
+    calibration_plot(results, png)
+
+    any_rows = sorted((next(iter(samples.values()))[b] for b in common),
+                      key=lambda r: r.date)
+    dates = [r.date for r in any_rows]
+    lines = [
+        f"# Walk-forward backtest — model comparison",
+        "",
+        f"Common sample: **{len(common)}** decisive UFC bouts with odds and a "
+        f"prediction from every model ({min(dates)} → {max(dates)}).",
+        "",
+        "| metric | " + " | ".join(r.label for r in results) +
+        " | implied prob | pick favourite |",
+        "|---|" + "---|" * (len(results) + 2),
+    ]
+    base = results[0]
+    lines += [
+        "| log loss | " + " | ".join(f"{r.model['log_loss']:.4f}" for r in results)
+        + f" | {base.implied['log_loss']:.4f} | – |",
+        "| Brier | " + " | ".join(f"{r.model['brier']:.4f}" for r in results)
+        + f" | {base.implied['brier']:.4f} | – |",
+        "| accuracy | " + " | ".join(f"{r.model['accuracy']:.1%}" for r in results)
+        + f" | {base.implied['accuracy']:.1%} | {base.favourite['accuracy']:.1%} |",
+        "",
+        f"Always-bet-favourite flat ROI on this sample: "
+        f"{_fmt_pct(base.favourite['roi_flat'])} "
+        f"(95% CI [{_fmt_pct(base.favourite['roi_ci'][0])}, "
+        f"{_fmt_pct(base.favourite['roi_ci'][1])}]).",
+        "",
+    ]
+    for r in results:
+        verdict = "BEATS" if r.model["log_loss"] < r.implied["log_loss"] else "does NOT beat"
+        lines += [
+            f"## {r.label} — staking simulation",
+            "",
+            f"{r.label} **{verdict} the bookmaker implied probability** on log loss.",
+            "",
+            *_staking_table(r),
+            "",
+        ]
+    lines += [
+        f"![calibration]({png.name})",
+        "",
+        "## Honest readout",
+        "",
+        "- Treat any positive ROI whose 95% bootstrap CI includes 0 as noise, not edge.",
+        "- The intersection sample is restricted to bouts where every model can "
+        "predict (e.g. Tier 2 needs both fighters to have prior UFC stat history), "
+        "so absolute numbers differ from single-model reports.",
+        "",
+    ]
+    md = REPORT_DIR / f"backtest_{out_name}.md"
+    md.write_text("\n".join(lines))
+    return {"common_bouts": len(common), "results": results,
+            "report": str(md), "plot": str(png)}
+
+
 def write_report(conn: sqlite3.Connection, model: str = MODEL) -> dict:
     """Run the full evaluation and write markdown + calibration PNG."""
     REPORT_DIR.mkdir(parents=True, exist_ok=True)

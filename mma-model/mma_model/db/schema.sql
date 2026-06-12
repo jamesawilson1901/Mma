@@ -125,6 +125,18 @@ CREATE TABLE IF NOT EXISTS ratings_history (
 CREATE INDEX IF NOT EXISTS idx_ratings_fighter ON ratings_history(fighter_id);
 CREATE INDEX IF NOT EXISTS idx_ratings_date ON ratings_history(date);
 
+-- PRE-fight Glicko state per fighter per bout (after layoff RD-inflation,
+-- before the bout is scored). Captured during the replay; feeds Tier 2
+-- features without any as-of-date reconstruction.
+CREATE TABLE IF NOT EXISTS prefight_ratings (
+    bout_id     TEXT REFERENCES bouts(bout_id),
+    fighter_id  TEXT REFERENCES fighters(fighter_id),
+    rating      REAL,
+    rd          REAL,
+    vol         REAL,
+    PRIMARY KEY (bout_id, fighter_id)
+);
+
 -- Pre-fight model predictions, captured during the chronological rating replay
 -- (strictly walk-forward: computed from ratings BEFORE the bout is scored).
 CREATE TABLE IF NOT EXISTS predictions (

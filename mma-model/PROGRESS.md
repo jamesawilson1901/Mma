@@ -4,7 +4,7 @@ Living build log. Update before ending any session so the next one can resume
 without re-explanation.
 
 ## Current state
-- **Build step:** 3 of 7 complete (backtest harness + baselines + calibration report). Step 4 (Tier 2 GBM) in progress.
+- **Build step:** 4 of 7 complete (Tier 2 GBM trained and compared). **Checkpoint reached — paused per spec before step 5 (switch back to Opus).**
 - **Branch:** `claude/mma-model-imaz57` (harness-designated). See "Decisions" re: spec's `mma-model` name.
 - **Folder:** `mma-model/` at repo root, as specified. No files outside it touched.
 
@@ -80,14 +80,49 @@ without re-explanation.
   (flattened reliability slope) → a shrinkage/calibration layer is an easy step
   4 win, alongside the Tier 2 feature model.
 
+### Step 4 — Tier 2 gradient-boosted model ✅
+- **Pre-fight Glicko state capture** (`prefight_ratings` table): the replay now
+  stores each fighter's layoff-inflated rating/RD per bout — Tier 2's strongest
+  feature with zero as-of-date reconstruction risk.
+- **Feature builder** (`models/features.py`): single chronological accumulator
+  pass (same leak-free pattern as the replay; leakage-tested). Eligibility =
+  both fighters have prior UFC stat history. 25 features: rating diff + RDs,
+  age/height/reach diffs, SLpM/SApM, TD acc/def, sub & KD rates per 15,
+  win-method profile (Laplace-smoothed), KO-loss rate, win rate, streak,
+  weighted last-3 form, log-layoff diff, experience, title/5-round flags.
+  Short-notice flag omitted: announcement dates aren't in any source (spec
+  feature, documented limitation).
+- **Symmetrization:** training emits every row in BOTH orientations (label +
+  antisymmetric features flipped, rd1/rd2 swapped); prediction averages the two
+  orientations → exactly orientation-invariant. This kills the
+  winner-listed-first label leak.
+- **Walk-forward training** (`models/tier2.py`): LightGBM retrained at each
+  calendar-year boundary on all bouts strictly before Jan 1 (training always
+  predates every predicted bout); 15 yearly models, 5246 predictions from 2012.
+- **Comparison report** (`backtest/report.py::write_comparison` →
+  `reports/backtest_tier2_vs_tier1.md`): evaluates models on the INTERSECTION
+  sample (n=2650 decisive bouts with odds + both models' predictions).
+- **Step 4 results (honest):**
+  | | log loss | Brier | accuracy |
+  |---|---|---|---|
+  | Tier 2 (GBM) | 0.6762 | 0.2409 | 59.4% |
+  | Tier 1 (Glicko-2) | 0.7102 | 0.2563 | 55.1% |
+  | implied prob | 0.6269 | – | 65.3% |
+  Tier 2 clearly beats Tier 1 and is far better calibrated (see plot), but
+  **neither beats the closing line** — consistent with published results on
+  this data. Top features by gain: age_diff, rating_diff, sapm_diff,
+  reach_diff, td_acc/def_diff. Staking ROI remains negative; the report says so
+  plainly.
+
 ## How to reproduce
 ```bash
 cd mma-model
 pip install -r requirements.txt
-python -m pytest                 # 32 tests
+python -m pytest                 # 39 tests
 python -m scripts.build_db       # builds data/mma.sqlite from cached CSVs
 python -m scripts.run_ratings    # runs Glicko-2, prints top-25 sanity ranking
 python -m scripts.run_backtest   # odds ingest + replay + reports/backtest_tier1.md
+python -m scripts.run_tier2      # Tier 2 GBM + reports/backtest_tier2_vs_tier1.md
 ```
 
 ## Decisions made
@@ -109,14 +144,18 @@ python -m scripts.run_backtest   # odds ingest + replay + reports/backtest_tier1
   use `get_or_create`, so both fighters always get an id).
 - RD cap currently = default RD (350). Fine for v1.
 
-## Next: Step 4 — Tier 2 gradient-boosted model
-- Walk-forward features as-of fight date: Glicko diff + RD, age/reach/height
-  diffs, sig-strike rates, TD acc/def, sub attempts, win-method profile, layoff
-  days, title/5-round flag, recent form.
-- **Critical:** symmetrize/randomize fighter orientation in training — ufcstats
-  lists winners as fighter1, so naive f1-vs-f2 features leak the label through
-  ordering.
-- Evaluate vs Tier 1 and baselines on the same odds sample via the existing
-  harness (report.py is model-agnostic via the `predictions` table).
-- Also try a calibration/shrinkage layer on Tier 1 (it is overconfident).
-- CHECKPOINT after step 4: prompt user to switch back to Opus before step 5.
+## Next: Step 5 (after switching back to Opus per checkpoint)
+Cross-promotion records ingestion (Tapology/Sherdog) → global Glicko across
+promotions:
+- **Network caveat:** tapology.com / sherdog.com may be firewalled here like
+  ufcstats was. Plan B (apply the git/data self-recovery rules): look for an
+  open dataset/mirror on GitHub (e.g. Sherdog scrapes) before writing a live
+  scraper; whichever route, respect robots.txt, low volume, cache aggressively.
+- MMA-rules bouts only (tag and exclude ONE's muay thai/kickboxing/grappling);
+  `ruleset` column already exists.
+- `promotion` categorical feature; entity resolution across sources via the
+  alias table (UFC names ↔ Tapology/Sherdog names).
+- Re-run global ratings; UFC debutants should then carry real priors instead
+  of 1500.
+Remaining after that: step 6 (live odds snapshots, paper-bet ledger,
+dashboard), step 7 (run forward).

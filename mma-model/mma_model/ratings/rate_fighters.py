@@ -41,6 +41,7 @@ def run(conn: sqlite3.Connection, engine: Glicko2 | None = None) -> dict:
     """
     engine = engine or Glicko2()
     conn.execute("DELETE FROM ratings_history")
+    conn.execute("DELETE FROM prefight_ratings")
     conn.execute("DELETE FROM predictions WHERE model='tier1_glicko'")
 
     bouts = conn.execute(
@@ -54,6 +55,7 @@ def run(conn: sqlite3.Connection, engine: Glicko2 | None = None) -> dict:
     n_bouts: dict[str, int] = {}
     snapshots = []
     preds = []
+    prefight = []
     n_rated = n_skipped = 0
 
     for b in bouts:
@@ -78,7 +80,9 @@ def run(conn: sqlite3.Connection, engine: Glicko2 | None = None) -> dict:
                     else:
                         r2 = r
 
-        # Pre-fight prediction from the (layoff-inflated) PRE-bout ratings.
+        # Pre-fight state + prediction from the (layoff-inflated) PRE-bout ratings.
+        prefight.append((b["bout_id"], f1, r1.rating, r1.rd, r1.vol))
+        prefight.append((b["bout_id"], f2, r2.rating, r2.rd, r2.vol))
         preds.append((
             b["bout_id"], "tier1_glicko", engine.expected_score(r1, r2),
             n_bouts.get(f1, 0), n_bouts.get(f2, 0),
@@ -113,6 +117,11 @@ def run(conn: sqlite3.Connection, engine: Glicko2 | None = None) -> dict:
         "INSERT OR REPLACE INTO predictions"
         "(bout_id,model,p_fighter1,n_prior1,n_prior2) VALUES(?,?,?,?,?)",
         preds,
+    )
+    conn.executemany(
+        "INSERT OR REPLACE INTO prefight_ratings"
+        "(bout_id,fighter_id,rating,rd,vol) VALUES(?,?,?,?,?)",
+        prefight,
     )
     conn.commit()
     return {

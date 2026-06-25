@@ -1,0 +1,19 @@
+{
+  "name": "Wolf Knight — Ember Hollow",
+  "short_name": "Wolf Knight",
+  "description": "A gentle 3/4 top-down adventure for kids. Explore Ember Hollow and free the fire spirit.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1a0f0f",
+  "theme_color": "#1a0f0f",
+  "icons": [
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

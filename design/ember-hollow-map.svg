@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="980" height="620" fill="#1a1513"/>
+  <text x="490" y="42" fill="#ffb38a" font-size="26" font-weight="700" text-anchor="middle">Ember Hollow — Level Map</text>
+  <text x="490" y="68" fill="#9b8e85" font-size="14" text-anchor="middle">Fire slice · played left → right · one backtrack loop after the Fire Wolf is earned</text>
+
+  <!-- connectors -->
+  <line x1="300" y1="250" x2="350" y2="250" stroke="#ff7a45" stroke-width="4"/>
+  <polygon points="350,250 340,244 340,256" fill="#ff7a45"/>
+  <line x1="610" y1="250" x2="660" y2="250" stroke="#ff7a45" stroke-width="4"/>
+  <polygon points="660,250 650,244 650,256" fill="#ff7a45"/>
+
+  <!-- ROOM 1 -->
+  <rect x="50" y="100" width="250" height="300" rx="14" fill="#2b2320" stroke="#ff5a2b" stroke-width="2.5"/>
+  <text x="175" y="128" fill="#ffd9c2" font-size="16" font-weight="700" text-anchor="middle">R1 · Hollow Entrance</text>
+  <text x="175" y="148" fill="#8c7f76" font-size="11" text-anchor="middle">teaches: move · attack · form-switch</text>
+  <g font-size="13" fill="#f0e6dd">
+    <circle cx="74" cy="178" r="6" fill="#ffffff"/><text x="88" y="182">Start — Kael + Pip (intro)</text>
+    <circle cx="74" cy="208" r="6" fill="#8a7fa5"/><text x="88" y="212">Shade (first enemy)</text>
+    <circle cx="74" cy="238" r="6" fill="#5b4b8a"/><text x="88" y="242">Dark nook → 🐺 Pup #1</text>
+    <text x="88" y="258" fill="#9a8d84" font-size="10">(switch to Dark Wolf to see)</text>
+    <circle cx="74" cy="288" r="6" fill="#c0682d"/><text x="88" y="292">Burnable ▓ → 🐺 Pup #3</text>
+    <text x="88" y="308" fill="#9a8d84" font-size="10">(needs Fire Wolf — come back)</text>
+    <circle cx="74" cy="338" r="6" fill="#ff5a2b"/><text x="88" y="342">lava patches (hazard)</text>
+    <circle cx="74" cy="368" r="6" fill="#6fe3a0"/><text x="88" y="372">★ CP1 (exit)</text>
+  </g>
+
+  <!-- ROOM 2 -->
+  <rect x="360" y="100" width="250" height="300" rx="14" fill="#2b2320" stroke="#ff5a2b" stroke-width="2.5"/>
+  <text x="485" y="128" fill="#ffd9c2" font-size="16" font-weight="700" text-anchor="middle">R2 · Ember Causeway</text>
+  <text x="485" y="148" fill="#8c7f76" font-size="11" text-anchor="middle">teaches: dodge · telegraphs · choice</text>
+  <g font-size="13" fill="#f0e6dd">
+    <circle cx="384" cy="178" r="6" fill="#8a7fa5"/><text x="398" y="182">Ember Moths (diving)</text>
+    <circle cx="384" cy="208" r="6" fill="#ff8a3d"/><text x="398" y="212">! Ember geysers (timed)</text>
+    <text x="398" y="228" fill="#9a8d84" font-size="10">cross when dormant (~2s cycle)</text>
+    <circle cx="384" cy="258" r="6" fill="#cfcfcf"/><text x="398" y="262">easy main path</text>
+    <circle cx="384" cy="295" r="6" fill="#b33a5a"/><text x="398" y="299">Branch: Shadow Hound</text>
+    <text x="398" y="315" fill="#ffd54a" font-size="12">→ 🐺 Pup #2 (optional)</text>
+    <circle cx="384" cy="350" r="6" fill="#6fe3a0"/><text x="398" y="354">★ CP2 (before boss)</text>
+  </g>
+
+  <!-- ROOM 3 -->
+  <rect x="670" y="100" width="250" height="300" rx="14" fill="#2b2320" stroke="#ff5a2b" stroke-width="2.5"/>
+  <text x="795" y="128" fill="#ffd9c2" font-size="16" font-weight="700" text-anchor="middle">R3 · Heart of the Hollow</text>
+  <text x="795" y="148" fill="#8c7f76" font-size="11" text-anchor="middle">the boss + the reward</text>
+  <g font-size="13" fill="#f0e6dd">
+    <circle cx="694" cy="188" r="7" fill="#b33a5a"/><text x="710" y="192">◉ Shadowgrip</text>
+    <text x="710" y="208" fill="#9a8d84" font-size="10">gripping caged Cinder (3 phases)</text>
+    <circle cx="694" cy="238" r="6" fill="#5b4b8a"/><text x="710" y="242">Phase 3: room goes dark</text>
+    <text x="710" y="258" fill="#9a8d84" font-size="10">→ become Dark Wolf to see</text>
+    <circle cx="694" cy="290" r="6" fill="#ffd54a"/><text x="710" y="294">Win → free Cinder</text>
+    <text x="710" y="310" fill="#ffb38a" font-size="12">★ gain FIRE WOLF form</text>
+    <circle cx="694" cy="350" r="6" fill="#6fe3a0"/><text x="710" y="354">★ CP3 (arena entrance)</text>
+  </g>
+
+  <!-- backtrack loop -->
+  <path d="M 795 400 C 795 470, 175 470, 175 400" fill="none" stroke="#ffd54a" stroke-width="2.5" stroke-dasharray="7 5"/>
+  <polygon points="175,400 169,412 181,412" fill="#ffd54a"/>
+  <text x="485" y="466" fill="#ffd54a" font-size="13" text-anchor="middle">shortcut opens after boss → backtrack, burn ▓ in R1 → Pup #3</text>
+
+  <!-- reward line -->
+  <text x="485" y="506" fill="#ffb38a" font-size="14" font-weight="600" text-anchor="middle">All 3 pups collected → permanent +1 heart (5 → 6) → exit onward (Luna dream → Earth)</text>
+
+  <!-- legend -->
+  <line x1="50" y1="528" x2="920" y2="528" stroke="#3a302c" stroke-width="1"/>
+  <g font-size="12" fill="#d8ccc3">
+    <circle cx="64" cy="556" r="6" fill="#ffd54a"/><text x="76" y="560">🐺 lost wolf pup</text>
+    <circle cx="214" cy="556" r="6" fill="#6fe3a0"/><text x="226" y="560">★ checkpoint</text>
+    <circle cx="344" cy="556" r="6" fill="#5b4b8a"/><text x="356" y="560">dark zone (Dark Wolf)</text>
+    <circle cx="524" cy="556" r="6" fill="#c0682d"/><text x="536" y="560">▓ burnable (Fire Wolf)</text>
+    <circle cx="694" cy="556" r="6" fill="#ff5a2b"/><text x="706" y="560">lava / geyser hazard</text>
+    <circle cx="64" cy="584" r="6" fill="#8a7fa5"/><text x="76" y="588">Shade / Moth enemies</text>
+    <circle cx="214" cy="584" r="6" fill="#b33a5a"/><text x="226" y="588">Shadow Hound / boss</text>
+  </g>
+</svg>

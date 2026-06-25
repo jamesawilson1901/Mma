@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Maskable: keep key art within the centre ~80% safe zone. -->
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="40%" r="75%">
+      <stop offset="0%" stop-color="#3a1414"/>
+      <stop offset="100%" stop-color="#160a0a"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <!-- blood moon -->
+  <circle cx="256" cy="200" r="92" fill="#ff5a2b"/>
+  <circle cx="256" cy="200" r="92" fill="#ff7a4a" opacity="0.35"/>
+  <!-- howling wolf silhouette -->
+  <path fill="#0e0707" d="
+    M150 392
+    C150 350 168 320 196 300
+    C188 280 196 250 220 232
+    C214 262 232 274 246 280
+    C250 250 268 232 296 226
+    C286 246 292 262 306 272
+    C336 286 360 320 362 360
+    C362 376 356 392 356 392
+    Z"/>
+  <!-- glowing eye -->
+  <circle cx="248" cy="296" r="6" fill="#ffd9a0"/>
+</svg>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a0f0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Wolf Knight — Ember Hollow</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/icons/icon.svg" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #1a0f0f;
+      overflow: hidden;
+      /* Stop iOS double-tap zoom / text selection during play. */
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+    #game {
+      width: 100%;
+      height: 100%;
+    }
+    /* Ask the player to turn the device when held in portrait. The game is
+       landscape-only. Shown only on narrow/portrait screens. */
+    #rotate-notice {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      background: #1a0f0f;
+      color: #ffd9a0;
+      font-family: sans-serif;
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      padding: 24px;
+    }
+    #rotate-notice .icon { font-size: 64px; }
+    #rotate-notice .msg { font-size: 22px; max-width: 380px; line-height: 1.4; }
+    @media (orientation: portrait) {
+      #game { display: none; }
+      #rotate-notice { display: flex; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+
+  <div id="rotate-notice">
+    <div class="icon">🔄</div>
+    <div class="msg">Please turn your device sideways to play <b>Wolf Knight</b>.</div>
+  </div>
+
+  <!-- Vendored engine + plugins (offline-safe, no CDN). -->
+  <script src="vendor/phaser.min.js"></script>
+  <script src="vendor/rexvirtualjoystickplugin.min.js"></script>
+
+  <!-- Game data + code. Order matters: data, then assets, then scenes, then boot. -->
+  <script src="js/config.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/scenes/BootScene.js"></script>
+  <script src="js/scenes/EmberHollowScene.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "roll-and-roar",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "phaser": "^4.2.0"
+  },
+  "devDependencies": {
+    "vite": "^8.1.3"
+  }
+}

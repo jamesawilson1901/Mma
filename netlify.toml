@@ -1,0 +1,21 @@
+# Anchor — Netlify configuration
+[build]
+  publish = "public"
+  command = "npm install"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# The reminder dispatcher declares its own schedule in code
+# (netlify/functions/reminders-dispatch.mjs → export const config).
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
